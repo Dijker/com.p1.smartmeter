@@ -47,7 +47,7 @@ class P1Driver extends Homey.Driver {
                     device.capabilities.push('meter_power.producedOffPeak')
                 }
                 if (data.includeOffPeak) {
-                    device.capabilities.push('meter_offPeak')
+                    device.capabilities.push('meter_offpeak')
                 }
                 callback(null, JSON.stringify(device)) // report success to frontend
             } catch (error) {
@@ -64,8 +64,7 @@ class P1Driver extends Homey.Driver {
         ]
 
         for (const trigger of triggers) {
-            this._flowTriggers[trigger] = new Homey.FlowCardTriggerDevice(
-              trigger).register()
+            this._flowTriggers[trigger] = new Homey.FlowCardTriggerDevice(trigger).register()
         }
     }
 
@@ -82,21 +81,19 @@ class P1Driver extends Homey.Driver {
             meterGasTm = Date.now() / 1000 // gas_meter_timestamp
             // constructed gas readings
             if (this.meters.lastMeterGas !== meterGas) {
-                if (this.meters.lastMeterGas !== null) {	// first reading after init
-                    let hoursPassed = (meterGasTm -
-                      this.meters.lastMeterGasTm) / 3600	// hrs
-                    if (hoursPassed > 1.5) { // too long ago; assume 1 hour interval
+                if (this.meters.lastMeterGas !== null) {
+                    // first reading after init in hrs
+                    let hoursPassed = (meterGasTm - this.meters.lastMeterGasTm) / 3600
+                    // too long ago; assume 1 hour interval
+                    if (hoursPassed > 1) {
                         hoursPassed = 1
                     }
-                    measureGas = Math.round(1000 *
-                        ((meterGas - this.meters.lastMeterGas) / hoursPassed)) /
-                      1000 // gas_interval_meter
+                    // gas_interval_meter
+                    measureGas = Math.round(1000 * ((meterGas - this.meters.lastMeterGas) / hoursPassed)) / 1000
                 }
                 this.meters.lastMeterGasTm = meterGasTm
             }
         }
-
-        console.log(data.electricity);
 
         if (data.hasOwnProperty('electricity') && data.electricity) {
             // electricity readings from device
@@ -117,26 +114,22 @@ class P1Driver extends Homey.Driver {
               data.electricity.instantaneous.power.negative.L3.reading) * 1000)
 
             let measurePower = measurePowerConsumed - lastMeasurePowerProduced
-console.log(measurePower);
+
             let measurePowerAvg = this.meters.lastMeasurePowerAvg
             const meterPowerTm = Date.now() / 1000 // readings.tm;
 
             // constructed electricity readings
-            const meterPower = (meterPowerOffpeak + meterPowerPeak) -
-              (meterPowerOffpeakProduced + meterPowerPeakProduced)
+            const meterPower =
+                (meterPowerOffpeak + meterPowerPeak) - (meterPowerOffpeakProduced + meterPowerPeakProduced)
 
-            const offPeak = device.round(data.electricity.tariffIndicator) ===
-              1;
-            const measurePowerDelta = (measurePower -
-            this.meters.lastMeasurePower)
+            const offPeak = device.round(data.electricity.tariffIndicator) === 1;
+            const measurePowerDelta = (measurePower - this.meters.lastMeasurePower)
 
             if (offPeak !== this.meters.lastOffpeak) {
                 const tokens = {
                     tariff: offPeak,
                 }
-                device._driver.triggerChangedFlow('meter_tariff.changed',
-                  device,
-                  tokens)
+                device._driver.triggerChangedFlow('meter_tariff.changed', device, tokens)
             }
 
             if (measurePower !== this.meters.lastMeasurePower) {
@@ -144,8 +137,7 @@ console.log(measurePower);
                     power: measurePower,
                     power_delta: measurePowerDelta,
                 }
-                device._driver.triggerChangedFlow('power.changed', device,
-                  tokens)
+                device._driver.triggerChangedFlow('power.changed', device, tokens)
             }
 
             // store the new readings in memory
@@ -167,7 +159,6 @@ console.log(measurePower);
         }
 
         // update the device state
-        // this.log(this.meters);
         this.updateDeviceState()
     }
 
